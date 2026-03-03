@@ -49,22 +49,42 @@ async def get_summary(title: str, season: int, episode: int):
         show = plex.library.section('TV Shows').get(show_name)
         prev_episodes = []
         for s in range(1, season + 1):
-            season_eps = show.season(s).episodes()
-            for ep in season_eps:
+            season_obj = show.season(s)
+            for ep in season_obj.episodes():
                 if ep.isWatched:
-                    prev_episodes.append(f"S{s}E{ep.episodeNumber}: {ep.title}")
+                    ep_info = f"S{s}E{ep.episodeNumber}: '{ep.title}'"
+                    if ep.summary:
+                        ep_info += f" – {ep.summary[:100]}..."
+                    prev_episodes.append(ep_info)
                 elif ep.seasonNumber == season and ep.episodeNumber == episode:
                     break
         
-        prev_summary = "; ".join(prev_episodes[-8:])  # Letzte 8 für Token-Limit
-        prompt = f"""'Was bisher geschah?' für {show_name} bis S{season}E{episode}:
-Vorherige Folgen: {prev_summary}
-Spoilerfreie Zusammenfassung: Wichtigste Plot-Entwicklungen, Charaktere, offene Fragen & Status quo.
-Für Einstieg in nächste Folge. 150-250 Wörter. Deutsch."""
+        recent_prev = prev_episodes[-12:]
+        full_context = " | ".join(recent_prev)
         
+        prompt = f"""DETAILLIERTE "Was bisher geschah?" Zusammenfassung für {show_name} bis S{season}E{episode}.
+
+Vorangegangene Folgen (alle gesehen):
+{full_context}
+
+ERZEUGE:
+- Ausführliche, aber spoilerfreie Handlungsübersicht der letzten 4-6 Episoden (wichtige Ereignisse, Wendungen, Konflikte).
+- Aktueller Status aller Hauptcharaktere (Beziehungen, Motivationen, Geheimnisse).
+- Offene Handlungsstränge & Cliffhanger.
+- Alles, was für perfektes Verständnis der nächsten Folge nötig ist.
+
+Struktur:
+1. **Letzte Episoden-Highlights** (300-400 Wörter)
+2. **Charakter-Status** (Bullet-Points)
+3. **Offene Fragen** (3-5 Punkte)
+
+DEUTSCH, detailliert (400-600 Wörter), immersiv für Einstieg."""
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1200,
+            temperature=0.7
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
