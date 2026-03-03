@@ -1,0 +1,5 @@
+plexapi
+openai
+fastapi
+uvicorn[standard]
+jinja2
