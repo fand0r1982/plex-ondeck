@@ -48,41 +48,43 @@ async def get_summary(title: str, season: int, episode: int):
         prev_episodes = []
         last_seen_episode = episode - 1
         
-        # GENAU wie vorher: Detaillierte prev + Ep-Summaries, aber STRICT bis last_seen
-        for s in range(1, season + 1):
+        # DETALLIERTE letzte 8 Episoden (FULL summaries!)
+        for s in range(season - 1 if season > 1 else 1, season + 1):
+            if s > len(show.seasons()): break
             season_obj = show.season(s)
+            eps_shown = 0
             for ep in season_obj.episodes():
-                if ep.isWatched:
-                    ep_info = f"S{s}E{ep.episodeNumber}: '{ep.title}'"
+                if ep.isWatched and eps_shown < 8:
+                    ep_info = f"S{s}E{ep.episodeNumber}: {ep.title}"
                     if ep.summary:
-                        ep_info += f" – {ep.summary[:120]}..."
+                        ep_info += f" | SUMMARY: {ep.summary}"  # FULL Ep-Summary!
                     prev_episodes.append(ep_info)
-                elif ep.seasonNumber == season and ep.episodeNumber == last_seen_episode + 1:
-                    break  # HARTER STOP vor neuer Folge
-                
-        recent_prev = prev_episodes[-12:]
-        total_seen = len(prev_episodes)
-        full_context = f"Gesamt {total_seen} Episoden gesehen. Letzte: {' | '.join(recent_prev)}"
+                    eps_shown += 1
+                if ep.seasonNumber == season and ep.episodeNumber == episode:
+                    break
         
-        prompt = f"""DETAILLIERTE "Was bisher geschah?" für {show_name} bis S{season}E{last_seen_episode}.
+        context = "\n".join(prev_episodes)
+        
+        prompt = f"""DETAILLIERTE ERINNERUNG für {show_name} S{season}E{episode} – WAS WEIßT DU AUS DEN LETZTEN EPISODEN?
 
-Vorangegangene Folgen (alle gesehen):
-{full_context}
+**EXAKTER Kontext** (letzte 8 GESEHENE Episoden, bis S{season}E{last_seen_episode}):
+{context}
 
-**WICHTIG: KEINE Infos zur S{season}E{episode}! Nur bis letzte gesehen.**
+**ERZEUGE** (DEUTSCH, 350-500 Wörter):
+- **Spezifische Ereignisse**: Was sind die 8-12 wichtigsten Geschehnisse der letzten 3-4 Episoden? (Charakternamen, konkrete Actions, Enthüllungen)
+- **Erinnerungspunkte**: Woran genau erinnern? (Bullet-Points mit Details)
+- **Status Quo**: Aktuelle Situation aller Hauptfiguren nach letzter Episode
 
-Struktur (DEUTSCH, 400-600 Wörter):
-1. **Letzte Episoden-Highlights** (300-400 Wörter) 
-2. **Charakter-Status** (Bullet-Points)
-3. **Offene Fragen** (3-5 Punkte)
-
-Immersiv für Einstieg."""
+**WICHTIGST**: 
+- VOLLE SPOILER der gesehenen Episoden OK
+- ABSOLUT KEIN SPOILER für S{season}E{episode}
+- Konkret & detailreich: Namen, Orte, Dialog-Referenzen, Twist-Aufzählung"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1200,
-            temperature=0.7
+            max_tokens=1000,
+            temperature=0.6
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
