@@ -65,14 +65,14 @@ async def get_summary(title: str, season: int, episode: int):
         
         context = "\n".join(prev_episodes)
         
-        prompt = f"""DETAILLIERTE ERINNERUNG für {show_name} S{season}E{episode} – WAS WEIßT DU AUS DEN LETZTEN EPISODEN?
+        prompt = f"""DETAILLIERTE ERINNERUNGSSTÜTZE für {show_name} S{season}E{episode} – WAS WEIßT DU AUS DEN LETZTEN EPISODEN?
 
-**EXAKTER Kontext** (letzte 8 GESEHENE Episoden, bis S{season}E{last_seen_episode}):
+**EXAKTER, detaillierter Kontext** (letzte 3 GESEHENE Episoden, bis S{season}E{last_seen_episode}):
 {context}
 
 **ERZEUGE** (DEUTSCH, 350-500 Wörter):
-- **Spezifische Ereignisse**: Was sind die 8-12 wichtigsten Geschehnisse der letzten 3-4 Episoden? (Charakternamen, konkrete Actions, Enthüllungen)
-- **Erinnerungspunkte**: Woran genau erinnern? (Bullet-Points mit Details)
+- **Spezifische Ereignisse**: Was sind die 5-10 wichtigsten,konkreten Geschehnisse der letzten 3 Episoden, die man benötigt, um die kommende Episode zu verstehen?
+- **Erinnerungspunkte**: Woran genau sollte man sich erinnern? (Bullet-Points mit Details)
 - **Status Quo**: Aktuelle Situation aller Hauptfiguren nach letzter Episode
 
 **WICHTIGST**: 
