@@ -1,40 +1,35 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.4">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px 'Helvetica Neue'; color: #3c3c3b; -webkit-text-stroke: #3c3c3b; background-color: #1d1400; background-color: rgba(29, 20, 0, 0.035)}
-    span.s1 {font-kerning: none}
-    span.s2 {font-kerning: none; color: #e4aa08; -webkit-text-stroke: 0px #e4aa08}
-  </style>
+<title>Plex On-Deck</title>
+<style> li {margin:10px;} button {margin-left:10px;} div {color:blue; margin:5px;} </style>
 </head>
 <body>
-<p class="p1"><span class="s1">&lt;!DOCTYPE html&gt;</span></p>
-<p class="p1"><span class="s1">&lt;html&gt;</span></p>
-<p class="p1"><span class="s1">&lt;head&gt;&lt;title&gt;Plex On-Deck&lt;/title&gt;&lt;/head&gt;</span></p>
-<p class="p1"><span class="s1">&lt;body&gt;</span></p>
-<p class="p1"><span class="s1">&lt;h1&gt;On-Deck Serien&lt;/h1&gt;</span></p>
-<p class="p1"><span class="s1">&lt;ul&gt;</span></p>
-<p class="p1"><span class="s1">{% for item in ondeck %}</span></p>
-<p class="p1"><span class="s1">&lt;li&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>{{ item.title }} S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;button </span><span class="s2">onclick</span><span class="s1">="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }})"&gt;Zusammenfassung&lt;/button&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;div </span><span class="s2">id</span><span class="s1">="sum-{{ item.title }}"&gt;&lt;/div&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/li&gt;</span></p>
-<p class="p1"><span class="s1">{% endfor %}</span></p>
-<p class="p1"><span class="s1">&lt;/ul&gt;</span></p>
-<p class="p1"><span class="s1">&lt;script&gt;</span></p>
-<p class="p1"><span class="s1">async function getSummary(show, season, episode) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>const res = await fetch(`/summary/${show}/${season}/${episode}`);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>const data = await res.json();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>document.getElementById(`sum-${show}`).innerText = data.summary;</span></p>
-<p class="p1"><span class="s1">}</span></p>
-<p class="p1"><span class="s1">&lt;/script&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/body&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/html&gt;</span></p>
+<h1>Deine On-Deck Serien (erster ungesehener Episoden)</h1>
+<ul>
+{% for item in ondeck %}
+<li>
+  <strong>{{ item.show_grandparent }}</strong> S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}
+  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }})">Summary laden</button>
+  <div id="sum-{{ item.title }}"></div>
+</li>
+{% endfor %}
+</ul>
+<script>
+async function getSummary(title, season, episode) {
+  try {
+    const res = await fetch(`/summary/${title}/${season}/${episode}`);
+    if (!res.ok) throw new Error('API Fehler');
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById(`sum-${title}`).innerHTML = `<em>Fehler: ${data.error}</em>`;
+    } else {
+      document.getElementById(`sum-${title}`).innerHTML = `<strong>Summary:</strong> ${data.summary}`;
+    }
+  } catch (e) {
+    document.getElementById(`sum-${title}`).innerHTML = `<em>Netzwerkfehler: ${e.message}</em>`;
+  }
+}
+</script>
 </body>
 </html>
