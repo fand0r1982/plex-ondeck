@@ -60,17 +60,17 @@ async def get_summary(title: str, season: int, episode: int):
         
         context = f"{watched_count} Episoden gesehen. Letzte: {' | '.join(recent_eps)}"
         
-        prompt = f"""KURZE "MERKE-DIR!" Zusammenfassung für {show_name} – WAS MUSST DU WISSEN für S{season}E{episode}?
+        prompt = f"""PRÄZISE "MERKE-DIR!" für {show_name} – ERINNERUNG für S{season}E{episode}?
 
 Kontext (bis S{season}E{last_seen_episode}):
 {context}
 
-**Fokus**: Aktueller Handlungsstand – AN WAS ERINNERN für nahtlosen Einstieg?
-- 2-3 Sätze pro Haupt-Plotstrang (aktueller Status)
-- Wichtige Charaktere (was treiben sie gerade? Beziehungen?)
-- 4-6 offene Fragen/Cliffhanger
+**PRÄZISE Details** (250-350 Wörter):
+- **Handlung**: 3-4 konkrete, aktuelle Plot-Points (wer hat was gemacht? Welche Enthüllungen?)
+- **Charaktere**: 5-7 Schlüsselpersonen (Name + 1 präziser Status/Satz)
+- **Cliffhanger**: 3-5 spezifische offene Fragen (nicht vage!)
 
-DEUTSCH, prägnant (250-400 Wörter), Bullet-Points + Absätze. Kein Spoiler für neue Folge!"""
+DEUTSCH. Bullet-Points. Konkret & handlungsrelevant. KEIN SPOILER!"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
