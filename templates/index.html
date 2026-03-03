@@ -1,27 +1,49 @@
 <!DOCTYPE html>
-<html><head><title>Plex On-Deck</title><style>li{margin:15px 0;} button{padding:5px;} div{background:#f0f8ff;padding:10px;border-left:4px solid blue;}</style></head>
+<html>
+<head>
+<title>Plex On-Deck Catch-up</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; max-width:900px; margin:0 auto; padding:20px; background:#f8fafc; color:#1e293b;}
+h1 {text-align:center; color:#0f172a; margin-bottom:30px; font-size:2em;}
+ul {list-style:none; padding:0;}
+li {background:white; margin:15px 0; padding:20px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.05); border-left:4px solid #3b82f6;}
+h3 {margin:0 0 10px; color:#1e293b; font-size:1.3em;}
+button {background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:500; transition:all 0.2s;}
+button:hover {background:#2563eb; transform:translateY(-1px);}
+.summary {margin-top:15px; padding:15px; background:#eff6ff; border-radius:8px; border-left:4px solid #60a5fa; font-size:0.95em; line-height:1.6;}
+.loading {color:#64748b; font-style:italic;}
+.error {color:#dc2626;}
+@media (max-width:600px) {li {padding:15px;}}
+</style>
+</head>
 <body>
-<h1>On-Deck: Nächste ungesehene Episoden</h1>
+<h1>📺 Plex On-Deck: Nächste Folgen + Catch-up</h1>
 <ul>
 {% for item in ondeck %}
 <li>
-  <h3>{{ item.show_title }} – S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}</h3>  <!-- FIX: Serienname! -->
-  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }})">Was bisher geschah? (OpenAI)</button>
-  <div id="sum-{{ item.title }}"></div>
+  <h3>{{ item.show_title }} – S{{ item.season }}E{{ item.episode }}<br><small>{{ item.ep_title }}</small></h3>
+  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }}, '{{ item.show_title }}')">📝 Was bisher geschah?</button>
+  <div class="summary" id="sum-{{ item.title }}"></div>
 </li>
 {% endfor %}
 </ul>
 <script>
-async function getSummary(title, season, episode) {
+async function getSummary(title, season, episode, show) {
   const div = document.getElementById(`sum-${title}`);
-  div.innerHTML = 'Lade Summary...';
+  div.innerHTML = '<span class="loading">Lade detaillierte Zusammenfassung...</span>';
   try {
     const res = await fetch(`/summary/${title}/${season}/${episode}`);
     const data = await res.json();
-    div.innerHTML = data.summary || `<em>Fehler: ${data.error}</em>`;
+    if (data.error) {
+      div.innerHTML = `<span class="error">❌ ${data.error}</span>`;
+    } else {
+      div.innerHTML = `<strong>📖 MERKE-DIR für ${show}:</strong><br>${data.summary.replace(/\n/g, '<br>')}`;
+    }
   } catch(e) {
-    div.innerHTML = `<em>Netzwerkfehler: ${e.message}</em>`;
+    div.innerHTML = `<span class="error">❌ Netzwerkfehler: ${e.message}</span>`;
   }
 }
 </script>
-</body></html>
+</body>
+</html>
