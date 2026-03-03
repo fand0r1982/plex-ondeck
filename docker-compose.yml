@@ -2,6 +2,10 @@ version: '3.8'
 services:
   plex-ondeck:
     build: .  # Relativ zum Repo!
+    environment:
+      - PLEX_URL=${PLEX_URL}  # Optional: Interpolation für Logs
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     ports:
       - "8088:80"
     restart: unless-stopped
