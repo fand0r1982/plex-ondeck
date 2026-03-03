@@ -20,7 +20,6 @@ async def index(request: Request):
         return HTMLResponse("<h1>Plex Token fehlt!</h1>")
     
     try:
-        # On-Deck Items (TV-Fokus)
         ondeck_items = plex.library.onDeck()
         tv_ondeck = [item for item in ondeck_items if item.type == 'episode'][:15]
         items = []
@@ -46,37 +45,43 @@ async def get_summary(title: str, season: int, episode: int):
     show_name = title.replace("_", " ")
     try:
         show = plex.library.section('TV Shows').get(show_name)
-        last_seen_season = season
-        last_seen_episode = episode - 1
         
-        # Kontext: Anzahl + letzte 8 Episoden
-        watched_count = sum(1 for s in show.seasons() for ep in s.episodes() if ep.isWatched and (s.index < last_seen_season or (s.index == last_seen_season and ep.index <= last_seen_episode)))
-        recent_eps = []
-        for s in range(max(1, last_seen_season-1), last_seen_season + 1):
+        # FIX: HARTE GRENZE – NUR watched Episoden bis episode-1
+        prev_episodes = []
+        for s in range(1, season + 1):
             season_obj = show.season(s)
-            for ep in sorted(season_obj.episodes()[:last_seen_episode+1 if s == last_seen_season else None], key=lambda e: e.index, reverse=True)[:4]:
-                if ep.isWatched:
-                    recent_eps.append(f"S{s}E{ep.index}: {ep.title}{' – ' + ep.summary[:80] if ep.summary else ''}")
+            for ep in season_obj.episodes():
+                # FIX: episodeNumber + STRICT watched-check + STOP bei aktueller
+                if ep.isWatched and ep.seasonNumber < season:
+                    prev_episodes.append(f"S{ep.seasonNumber}E{ep.episodeNumber}: {ep.title}")
+                elif ep.isWatched and ep.seasonNumber == season and ep.episodeNumber < episode:
+                    prev_episodes.append(f"S{ep.seasonNumber}E{ep.episodeNumber}: {ep.title}")
+                elif ep.seasonNumber == season and ep.episodeNumber == episode:
+                    break  # STOPP! Keine aktuelle Folge!
         
-        context = f"{watched_count} Episoden gesehen. Letzte: {' | '.join(recent_eps)}"
+        watched_count = len(prev_episodes)
+        recent_prev = prev_episodes[-10:]  # Nur 10 zuletzt
+        context = f"{watched_count} Episoden gesehen. Letzte 10: {' | '.join(recent_prev)}"
         
-        prompt = f"""PRÄZISE "MERKE-DIR!" für {show_name} – ERINNERUNG für S{season}E{episode}?
+        prompt = f"""PRÄZISE "MERKE-DIR!" für {show_name} – NUR BIS S{season}E{episode-1}!
 
-Kontext (bis S{season}E{last_seen_episode}):
+Kontext (STRICT bis letzte GESEHENE):
 {context}
 
-**PRÄZISE Details** (250-350 Wörter):
-- **Handlung**: 3-4 konkrete, aktuelle Plot-Points (wer hat was gemacht? Welche Enthüllungen?)
-- **Charaktere**: 5-7 Schlüsselpersonen (Name + 1 präziser Status/Satz)
-- **Cliffhanger**: 3-5 spezifische offene Fragen (nicht vage!)
+**ABSOLUT KEIN SPOILER** für S{season}E{episode}! Nur Handlung bis {context[-1]}.
 
-DEUTSCH. Bullet-Points. Konkret & handlungsrelevant. KEIN SPOILER!"""
+250-350 Wörter, DEUTSCH:
+• **Handlung**: 3-4 aktuelle Plot-Points (konkret: wer? was? wie?)
+• **Charaktere**: 5-7 Personen (Name + präziser Status)
+• **Cliffhanger**: 3-5 offene Fragen
+
+Bullet-Points, konkret!"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
-            temperature=0.5
+            temperature=0.4  # Präziser
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
