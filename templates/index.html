@@ -1,47 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Plex On-Deck Catch-up</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📺 Plex Catch-up</title>
+<meta name="viewport" content="width=device-width">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-body {font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; max-width:900px; margin:0 auto; padding:20px; background:#f8fafc; color:#1e293b;}
-h1 {text-align:center; color:#0f172a; margin-bottom:30px; font-size:2em;}
-ul {list-style:none; padding:0;}
-li {background:white; margin:15px 0; padding:20px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.05); border-left:4px solid #3b82f6;}
-h3 {margin:0 0 10px; color:#1e293b; font-size:1.3em;}
-button {background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:500; transition:all 0.2s;}
-button:hover {background:#2563eb; transform:translateY(-1px);}
-.summary {margin-top:15px; padding:15px; background:#eff6ff; border-radius:8px; border-left:4px solid #60a5fa; font-size:0.95em; line-height:1.6;}
-.loading {color:#64748b; font-style:italic;}
-.error {color:#dc2626;}
-@media (max-width:600px) {li {padding:15px;}}
+:root{--bg:#0f0f23;--bg-card:#1a1a2e;--accent:#6366f1;--text:#f1f5f9;--text-dim:#94a3b8;}
+* {box-sizing:border-box;}
+body {font-family:'Inter',system-ui,sans-serif;margin:0;padding:20px 20px 40px;background:linear-gradient(135deg,var(--bg),#1e1e3f);color:var(--text);min-height:100vh;}
+.header {text-align:center;margin-bottom:40px;}
+h1 {font-size:clamp(1.8em,5vw,3em);font-weight:600;background:linear-gradient(135deg,var(--accent),#8b5cf6);background-clip:text;-webkit-background-clip:text;color:transparent;margin:0;}
+.subtitle {color:var(--text-dim);font-size:1.1em;margin-top:8px;}
+.list {display:grid;gap:20px;max-width:1000px;margin:0 auto;}
+.card {background:var(--bg-card);backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.2);border-radius:20px;padding:24px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;}
+.card::before {content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),#8b5cf6);}
+.card:hover {transform:translateY(-8px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);border-color:var(--accent);}
+.episode-header {display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.series {font-size:1.4em;font-weight:600;color:var(--text);margin:0;}
+.ep-details {color:var(--text-dim);font-size:0.95em;}
+.btn {background:linear-gradient(135deg,var(--accent),#8b5cf6);color:white;border:none;padding:12px 24px;border-radius:12px;font-weight:500;font-size:0.95em;cursor:pointer;transition:all 0.2s;min-width:160px;}
+.btn:hover {transform:translateY(-2px);box-shadow:0 10px 25px rgba(99,102,241,0.4);}
+.summary {margin-top:20px;padding:20px;border-radius:16px;background:rgba(99,102,241,0.1);backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.2);line-height:1.7;font-size:0.97em;}
+.loading {color:var(--text-dim);font-style:italic;}
+.error {color:#f87171;background:rgba(248,113,113,0.1);border-color:#f87171;}
+@media (max-width:768px) {.episode-header{flex-direction:column;gap:8px;}.btn{width:100%;}}
+@keyframes fadeIn {from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.summary {animation:fadeIn 0.4s ease-out;}
 </style>
 </head>
 <body>
-<h1>📺 Plex On-Deck: Nächste Folgen + Catch-up</h1>
-<ul>
+<div class="header">
+  <h1>Plex On-Deck</h1>
+  <p class="subtitle">Nächste Folgen + AI Catch-up Summary</p>
+</div>
+<div class="list">
 {% for item in ondeck %}
-<li>
-  <h3>{{ item.show_title }} – S{{ item.season }}E{{ item.episode }}<br><small>{{ item.ep_title }}</small></h3>
-  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }}, '{{ item.show_title }}')">📝 Was bisher geschah?</button>
+<div class="card">
+  <div class="episode-header">
+    <div>
+      <div class="series">{{ item.show_title }}</div>
+      <div class="ep-details">S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}</div>
+    </div>
+  </div>
+  <button class="btn" onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }}, '{{ item.show_title }}')">✨ Was bisher geschah?</button>
   <div class="summary" id="sum-{{ item.title }}"></div>
-</li>
+</div>
 {% endfor %}
-</ul>
+</div>
 <script>
 async function getSummary(title, season, episode, show) {
   const div = document.getElementById(`sum-${title}`);
-  div.innerHTML = '<span class="loading">Lade detaillierte Zusammenfassung...</span>';
+  div.innerHTML = '<span class="loading">AI denkt nach... ✨</span>';
   try {
     const res = await fetch(`/summary/${title}/${season}/${episode}`);
     const data = await res.json();
     if (data.error) {
       div.innerHTML = `<span class="error">❌ ${data.error}</span>`;
     } else {
-      div.innerHTML = `<strong>📖 MERKE-DIR für ${show}:</strong><br>${data.summary.replace(/\n/g, '<br>')}`;
+      div.innerHTML = data.summary.replace(/\n/g, '<br>');
     }
   } catch(e) {
-    div.innerHTML = `<span class="error">❌ Netzwerkfehler: ${e.message}</span>`;
+    div.innerHTML = `<span class="error">❌ ${e.message}</span>`;
   }
 }
 </script>
