@@ -45,43 +45,44 @@ async def get_summary(title: str, season: int, episode: int):
     show_name = title.replace("_", " ")
     try:
         show = plex.library.section('TV Shows').get(show_name)
-        
-        # FIX: HARTE GRENZE – NUR watched Episoden bis episode-1
         prev_episodes = []
+        last_seen_episode = episode - 1
+        
+        # GENAU wie vorher: Detaillierte prev + Ep-Summaries, aber STRICT bis last_seen
         for s in range(1, season + 1):
             season_obj = show.season(s)
             for ep in season_obj.episodes():
-                # FIX: episodeNumber + STRICT watched-check + STOP bei aktueller
-                if ep.isWatched and ep.seasonNumber < season:
-                    prev_episodes.append(f"S{ep.seasonNumber}E{ep.episodeNumber}: {ep.title}")
-                elif ep.isWatched and ep.seasonNumber == season and ep.episodeNumber < episode:
-                    prev_episodes.append(f"S{ep.seasonNumber}E{ep.episodeNumber}: {ep.title}")
-                elif ep.seasonNumber == season and ep.episodeNumber == episode:
-                    break  # STOPP! Keine aktuelle Folge!
+                if ep.isWatched:
+                    ep_info = f"S{s}E{ep.episodeNumber}: '{ep.title}'"
+                    if ep.summary:
+                        ep_info += f" – {ep.summary[:120]}..."
+                    prev_episodes.append(ep_info)
+                elif ep.seasonNumber == season and ep.episodeNumber == last_seen_episode + 1:
+                    break  # HARTER STOP vor neuer Folge
+                
+        recent_prev = prev_episodes[-12:]
+        total_seen = len(prev_episodes)
+        full_context = f"Gesamt {total_seen} Episoden gesehen. Letzte: {' | '.join(recent_prev)}"
         
-        watched_count = len(prev_episodes)
-        recent_prev = prev_episodes[-10:]  # Nur 10 zuletzt
-        context = f"{watched_count} Episoden gesehen. Letzte 10: {' | '.join(recent_prev)}"
-        
-        prompt = f"""PRÄZISE "MERKE-DIR!" für {show_name} – NUR BIS S{season}E{episode-1}!
+        prompt = f"""DETAILLIERTE "Was bisher geschah?" für {show_name} bis S{season}E{last_seen_episode}.
 
-Kontext (STRICT bis letzte GESEHENE):
-{context}
+Vorangegangene Folgen (alle gesehen):
+{full_context}
 
-**ABSOLUT KEIN SPOILER** für S{season}E{episode}! Nur Handlung bis {context[-1]}.
+**WICHTIG: KEINE Infos zur S{season}E{episode}! Nur bis letzte gesehen.**
 
-250-350 Wörter, DEUTSCH:
-• **Handlung**: 3-4 aktuelle Plot-Points (konkret: wer? was? wie?)
-• **Charaktere**: 5-7 Personen (Name + präziser Status)
-• **Cliffhanger**: 3-5 offene Fragen
+Struktur (DEUTSCH, 400-600 Wörter):
+1. **Letzte Episoden-Highlights** (300-400 Wörter) 
+2. **Charakter-Status** (Bullet-Points)
+3. **Offene Fragen** (3-5 Punkte)
 
-Bullet-Points, konkret!"""
+Immersiv für Einstieg."""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
-            temperature=0.4  # Präziser
+            max_tokens=1200,
+            temperature=0.7
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
