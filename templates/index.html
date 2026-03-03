@@ -1,35 +1,27 @@
 <!DOCTYPE html>
-<html>
-<head>
-<title>Plex On-Deck</title>
-<style> li {margin:10px;} button {margin-left:10px;} div {color:blue; margin:5px;} </style>
-</head>
+<html><head><title>Plex On-Deck</title><style>li{margin:15px 0;} button{padding:5px;} div{background:#f0f8ff;padding:10px;border-left:4px solid blue;}</style></head>
 <body>
-<h1>Deine On-Deck Serien (erster ungesehener Episoden)</h1>
+<h1>On-Deck: Nächste ungesehene Episoden</h1>
 <ul>
 {% for item in ondeck %}
 <li>
-  <strong>{{ item.show_grandparent }}</strong> S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}
-  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }})">Summary laden</button>
+  <h3>{{ item.show_title }} – S{{ item.season }}E{{ item.episode }}: {{ item.ep_title }}</h3>  <!-- FIX: Serienname! -->
+  <button onclick="getSummary('{{ item.title }}', {{ item.season }}, {{ item.episode }})">Was bisher geschah? (OpenAI)</button>
   <div id="sum-{{ item.title }}"></div>
 </li>
 {% endfor %}
 </ul>
 <script>
 async function getSummary(title, season, episode) {
+  const div = document.getElementById(`sum-${title}`);
+  div.innerHTML = 'Lade Summary...';
   try {
     const res = await fetch(`/summary/${title}/${season}/${episode}`);
-    if (!res.ok) throw new Error('API Fehler');
     const data = await res.json();
-    if (data.error) {
-      document.getElementById(`sum-${title}`).innerHTML = `<em>Fehler: ${data.error}</em>`;
-    } else {
-      document.getElementById(`sum-${title}`).innerHTML = `<strong>Summary:</strong> ${data.summary}`;
-    }
-  } catch (e) {
-    document.getElementById(`sum-${title}`).innerHTML = `<em>Netzwerkfehler: ${e.message}</em>`;
+    div.innerHTML = data.summary || `<em>Fehler: ${data.error}</em>`;
+  } catch(e) {
+    div.innerHTML = `<em>Netzwerkfehler: ${e.message}</em>`;
   }
 }
 </script>
-</body>
-</html>
+</body></html>
