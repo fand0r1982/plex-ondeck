@@ -46,48 +46,37 @@ async def get_summary(title: str, season: int, episode: int):
     show_name = title.replace("_", " ")
     try:
         show = plex.library.section('TV Shows').get(show_name)
-        prev_episodes = []
         last_seen_season = season
-        last_seen_episode = episode - 1  # Letzte *gesehene* vor der neuen
+        last_seen_episode = episode - 1
         
-        # Sammle ALLE watched Episoden bis zur letzten gesehenen
-        for s in range(1, last_seen_season + 1):
+        # Kontext: Anzahl + letzte 8 Episoden
+        watched_count = sum(1 for s in show.seasons() for ep in s.episodes() if ep.isWatched and (s.index < last_seen_season or (s.index == last_seen_season and ep.index <= last_seen_episode)))
+        recent_eps = []
+        for s in range(max(1, last_seen_season-1), last_seen_season + 1):
             season_obj = show.season(s)
-            for ep in season_obj.episodes():
-                if ep.isWatched and (s < last_seen_season or ep.episodeNumber <= last_seen_episode):
-                    ep_info = f"S{s}E{ep.episodeNumber}: '{ep.title}'"
-                    if ep.summary:
-                        ep_info += f" ({ep.summary[:120]})"
-                    prev_episodes.append(ep_info)
+            for ep in sorted(season_obj.episodes()[:last_seen_episode+1 if s == last_seen_season else None], key=lambda e: e.index, reverse=True)[:4]:
+                if ep.isWatched:
+                    recent_eps.append(f"S{s}E{ep.index}: {ep.title}{' – ' + ep.summary[:80] if ep.summary else ''}")
         
-        # Komprimierter Kontext: Letzte 15 Episoden + Gesamtzahl
-        recent_prev = prev_episodes[-15:]
-        total_seen = len(prev_episodes)
-        full_context = f"Gesamt {total_seen} Episoden gesehen. Letzte: {' | '.join(recent_prev)}"
+        context = f"{watched_count} Episoden gesehen. Letzte: {' | '.join(recent_eps)}"
         
-        prompt = f"""FOLGENÜBERGREIFENDE "Was bisher geschah?" für {show_name} – AKTUELLER STAND nach EXAKT den gesehenen Folgen bis S{season}E{last_seen_episode}.
+        prompt = f"""KURZE "MERKE-DIR!" Zusammenfassung für {show_name} – WAS MUSST DU WISSEN für S{season}E{episode}?
 
-Kontext (ALLE gesehenen Episoden):
-{full_context}
+Kontext (bis S{season}E{last_seen_episode}):
+{context}
 
-**WICHTIG:**
-- KEINE Infos zur anstehenden S{season}E{episode}! Nur bis letzte gesehen.
-- Synthetisiere GESAMT-handlung über ALLE Staffeln/Folgen hinweg.
-- Fokussiere aktuellen Plot-Status, nicht chronologische Recap pro Folge.
+**Fokus**: Aktueller Handlungsstand – AN WAS ERINNERN für nahtlosen Einstieg?
+- 2-3 Sätze pro Haupt-Plotstrang (aktueller Status)
+- Wichtige Charaktere (was treiben sie gerade? Beziehungen?)
+- 4-6 offene Fragen/Cliffhanger
 
-Struktur (DEUTSCH, 500-800 Wörter):
-1. **Gesamt-Handlungsstand** (detailliert: Hauptstränge, wie sie sich entwickelt haben)
-2. **Charaktere – Aktueller Status** (Bullet-Points: Entwicklung, Beziehungen, Ziele, Geheimnisse)
-3. **Offene Fragen/Cliffhanger** (5-8 Punkte aus letzten Episoden)
-4. **Themen/Motivationen** (kurz)
-
-Immersiv, spoilerfrei für nächste Folge, aber tiefgehend für perfekten Einstieg."""
+DEUTSCH, prägnant (250-400 Wörter), Bullet-Points + Absätze. Kein Spoiler für neue Folge!"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1500,
-            temperature=0.6
+            max_tokens=800,
+            temperature=0.5
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
