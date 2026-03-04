@@ -84,7 +84,6 @@ async def get_summary(title: str, season: int, episode: int):
             model="gpt-5-mini",
             messages=[{"role": "user", "content": prompt}],
             max_completion_tokens=1000,
-            temperature=0.5
         )
         return {"summary": response.choices[0].message.content}
     except Exception as e:
