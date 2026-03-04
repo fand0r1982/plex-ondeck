@@ -81,7 +81,7 @@ async def get_summary(title: str, season: int, episode: int):
 - Konkret & detailreich: Namen, Orte, Dialog-Referenzen, Twist-Aufzählung"""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
             temperature=0.6
